@@ -1,6 +1,5 @@
 <?php
 session_start();
-
 //set the session userdata if non-existant
 if(!isset($_SESSION['userdata']))
 {

@@ -75,6 +75,15 @@ function remove_option(id)
 				<li><a href="#product_downloads" data-toggle="tab"><?php echo lang('digital_content');?></a></li>
 				<?php endif;?>
 				<li><a href="#product_categories" data-toggle="tab"><?php echo lang('categories');?></a></li>
+				<?php if($id){?>
+				<li><a href="#product_dimensions" data-toggle="tab"><?php echo "Dimensions(variants)";?></a></li>
+				<?php } 
+				if($product_variants){?>
+				<li><a href="#product_brands" data-toggle="tab"><?php echo "Brands";?></a></li>
+				<?php } 
+				if($all_vendors){?>
+				<li><a href="#all_vendors" data-toggle="tab"><?php echo "All Vendors";?></a></li>
+				<?php } ?>
 				<li><a href="#product_options" data-toggle="tab"><?php echo lang('options');?></a></li>
 				<li><a href="#product_related" data-toggle="tab"><?php echo lang('related_products');?></a></li>
 				<li><a href="#product_photos" data-toggle="tab"><?php echo lang('images');?></a></li>
@@ -248,6 +257,66 @@ function remove_option(id)
 				</div>
 			</div>
 			
+			<div class="tab-pane" id="product_dimensions">
+				<div class="row">
+					<div class="span8">
+						<?php
+							foreach($product_variants as $info){
+							echo '<p> Type <b>'.$info->name.'</b>      Value <b>'.$info->dimension_value.'</b>';
+						}
+						?>
+						<label for="dimension">Dimension</label>
+							<?php
+							$options= array();
+							foreach ($all_product_dimensions as $info) {
+									$options[$info->id]=$info->name;
+							}
+							echo form_dropdown('product_dimensions_id', $options, '', 'id="product_dimensions_id" class="span4"');
+							?>
+							<input type="text" id="product_dimensions_value" name="product_dimensions_value" value="">
+							<a href="javascript:void(0)" onclick="add_variant();return false;" id="" class="btn">Add Variant</a>
+					</div>
+				</div>
+			</div>
+
+			<div class="tab-pane" id="product_brands">
+				<div class="row">
+					<div class="span8">
+						<?php
+						$options= array();
+						foreach ($all_brands as $info) {
+								$options[$info->id]=$info->brand_name;
+						}
+						foreach($product_variants as $info){
+							echo '<p id=variant_'.$info->variant_id.'>Type <b>'.$info->name.'</b>      Value <b>'.$info->dimension_value.'</b>';
+							echo '<label for="brand_name">Brand Name</label>';
+							echo form_dropdown('brand_ids_arr_'.$info->variant_id.'[]', $options, '', 'class="span4" multiple id=brand_ids_arr_'.$info->variant_id);
+							echo "<a onclick=map_brand_to_variant(".$id.','.$info->variant_id.");return false;>Save</a></p>";
+						}
+						?>
+					</div>
+				</div>
+			</div>
+			<div class="tab-pane" id="all_vendors">
+				<div class="row">
+					<div class="span8">
+						<?php
+						$options= array();
+						foreach ($all_product_items as $info) {
+								$options[$info->id]=$info->product_name."-".$info->brand_name."-".$info->dimension_value.'-'.$info->dimension_name;
+						}
+						foreach($all_vendors as $info){
+							echo '<p id=vendor_'.$info->id.'>Vendor Name <b>'.$info->firstname.'</b>';
+							echo '<label for="product_item">Product Items</label>';
+							echo form_dropdown('product_item_arr_'.$info->id, $options, '', 'class="span4"  id=product_item_arr_'.$info->id);
+							echo '<input type="text"  name=price_'.$info->id.' id=item_price_'.$info->id.'>';
+							echo "<a onclick=vendor_product_item(".$id.','.$info->id.");return false;>Save</a></p>";
+						}
+						?>
+					</div>
+				</div>
+			</div>			
+
 			<div class="tab-pane" id="product_options">
 				<div class="row">
 					<div class="span8">
@@ -528,6 +597,9 @@ function remove_option(id)
 		<?php
 		$data	= array('name'=>'saleprice', 'value'=>set_value('saleprice', $saleprice), 'class'=>'span4');
 		echo form_input($data);?>
+
+		
+
 	</div>
 </div>
 
@@ -718,7 +790,65 @@ function photos_sortable()
 		scroll: true
 	});
 }
+function map_brand_to_variant(product_id, variant_id)
+{
+	var brand_ids_arr = $('#brand_ids_arr_'+variant_id).val();
+	if(!product_id || !variant_id || !brand_ids_arr){
+		alert("all the values are mandatory");
+		return false;
+	}
+	$.post("<?php echo site_url($this->config->item('admin_folder').'/products/map_dimensions_to_variant/');?>", { variant_id: variant_id,
+		product_id:product_id,
+		brand_ids_arr:brand_ids_arr
+		},
+										function(data) {
+											alert(data)
+										})
+
+}	function add_variant(){
+	if(!$('#product_dimensions_id').val()||!$("#product_dimensions_value").val()){
+		alert("fields are mandatory");
+		return false;
+	}
+	$.post("<?php echo site_url($this->config->item('admin_folder').'/products/add_product_variant/');?>", { dimension_id: $('#product_dimensions_id').val(),
+		value:$("#product_dimensions_value").val(),
+		product_id:"<?php echo $id ?>"
+		},
+										function(data) {
+											
+											$('#product_list').html('');
+									
+											$.each(data, function(index, value){
+									
+												if($('#related_product_'+index).length == 0)
+												{
+													$('#product_list').append('<option id="product_item_'+index+'" value="'+index+'">'+value+'</option>');
+													
+												}
+											});
+									
+									}, 'json');
+}
 //]]>
+
+function vendor_product_item(product_id,vendor_id){
+	
+
+		var product_item_arr = $('#product_item_arr_'+vendor_id).val();
+		var item_price = $('#item_price_'+vendor_id).val();
+	if(!product_id || !vendor_id || !product_item_arr ||!item_price){
+		alert("all the values are mandatory");
+		return false;
+	}
+	$.post("<?php echo site_url($this->config->item('admin_folder').'/products/add_vendor_product_item/');?>", { vendor_id: vendor_id,
+		product_id:product_id,
+		product_item_arr:product_item_arr,
+		item_price:item_price
+		},
+										function(data) {
+	
+										})
+}
 </script>
 <?php
 function related_items($id, $name) {

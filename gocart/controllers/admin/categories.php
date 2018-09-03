@@ -58,13 +58,13 @@ class Categories extends Admin_Controller {
     {
         
         $config['upload_path']      = 'uploads/images/full';
-        $config['allowed_types']    = 'gif|jpg|png';
-        $config['max_size']         = $this->config->item('size_limit');
-        $config['max_width']        = '1024';
-        $config['max_height']       = '768';
+        $config['allowed_types']    = '*';//'gif|jpg|png';
+        $config['max_size']         = $this->config->item('size_limit')?$this->config->item('size_limit'):'500000';
+        $config['max_width']        = '1200';
+        $config['max_height']       = '1100';
         $config['encrypt_name']     = true;
         $this->load->library('upload', $config);
-        
+        //var_dump($config);die;
         
         $this->category_id  = $id;
         $this->load->helper('form');
@@ -220,7 +220,6 @@ class Categories extends Admin_Controller {
                 $this->image_lib->resize(); 
                 $this->image_lib->clear();
             }
-            
             $this->load->helper('text');
             
             //first check the slug field

@@ -1,5 +1,4 @@
 <?php
-
 class Products extends Admin_Controller {	
 	
 	private $use_inventory = false;
@@ -109,7 +108,65 @@ class Products extends Admin_Controller {
 		}
 		
 	}
-	
+	function add_product_variant()
+	{	$dimension_id	= trim($this->input->post('dimension_id'));
+		$value	= $this->input->post('value');
+		$product_id = $this->input->post('product_id');
+		if(empty($product_id)||empty($dimension_id)||empty($value))
+		{
+			echo json_encode(array());
+		}
+		else
+		{
+			$results	= $this->Product_model->add_product_variant($product_id, $dimension_id, $value);
+			
+			echo json_encode($results);
+		}
+	}
+	function map_dimensions_to_variant(){
+
+		$brand_ids_arr	= $this->input->post('brand_ids_arr');
+		$variant_id	= $this->input->post('variant_id');
+		$product_id = $this->input->post('product_id');
+		if(empty($product_id)||empty($variant_id)||empty($brand_ids_arr))
+		{
+			echo json_encode(array());
+		}
+		else
+		{
+			
+			$count = 0;
+			foreach($brand_ids_arr as $brand_id_info){
+				$this->Product_model->map_dimensions_to_variant($product_id, $variant_id, $brand_id_info);
+			}
+
+
+			$results	= array("status"=>true);
+			
+			echo json_encode($results);
+		}
+	}
+	function add_vendor_product_item(){
+		$product_item_arr	= $this->input->post('product_item_arr');
+		$vendor_id	= $this->input->post('vendor_id');
+		$product_id = $this->input->post('product_id');
+		$item_price = $this->input->post('item_price');
+		if(empty($product_id)||empty($vendor_id)||empty($product_item_arr))
+		{
+			echo json_encode(array());
+		}
+		else
+		{
+			
+			$count = 0;
+			$this->Product_model->add_vendor_product_item($product_id, $vendor_id, $product_item_arr,$item_price);
+			
+
+			$results	= true;
+			
+			echo json_encode($results);
+		}
+	}
 	function bulk_save()
 	{
 		$products	= $this->input->post('product');
@@ -140,6 +197,13 @@ class Products extends Admin_Controller {
 		
 		$data['categories']		= $this->Category_model->get_categories_tiered();
 		$data['file_list']		= $this->Digital_Product_model->get_list();
+
+		//my added
+		$data['all_brands']      = $this->Product_model->get_all_brands();
+		$data['all_product_dimensions']      = $this->Product_model->get_all_product_dimensions();
+		$data['all_vendors'] = $this->Product_model->get_all_vendors();
+
+
 
 		$data['page_title']		= lang('product_form');
 
@@ -181,6 +245,8 @@ class Products extends Admin_Controller {
 			// get product & options data
 			$data['product_options']	= $this->Option_model->get_product_options($id);
 			$product					= $this->Product_model->get_product($id);
+			$data['product_variants'] = $product->product_variants;
+			$data['all_product_items'] = $this->Product_model->get_all_product_items($id);
 			
 			//if the product does not exist, redirect them to the product list with an error
 			if (!$product)
@@ -220,7 +286,11 @@ class Products extends Admin_Controller {
 				{
 					$data['product_categories'][] = $product_category->id;
 				}
-				
+				$data['product_brands_data']	= array();
+				foreach($product->product_brands_details as $product_brands_data)
+				{
+					$data['product_brands_data'][] = $product_brands_data->brand_id;
+				}
 				$data['related_products']	= $product->related_products;
 				$data['images']				= (array)json_decode($product->images);
 			}
@@ -333,7 +403,14 @@ class Products extends Admin_Controller {
 			$save['taxable']			= $this->input->post('taxable');
 			$save['enabled']			= $this->input->post('enabled');
 			$post_images				= $this->input->post('images');
+
+			//added by mohit
+			$save['product_dimensions_id'] = $this->input->post('product_dimensions_id');
+			$save['product_dimensions_value'] = $this->input->post('product_dimensions_value');
+			$brand_ids_arr = $this->input->post('brand_ids_arr');
 			
+
+
 			$save['slug']				= $slug;
 			$save['route_id']			= $route_id;
 			
@@ -372,7 +449,7 @@ class Products extends Admin_Controller {
 				$categories	= array();
 			}
 			
-			
+			$brand_ids_arr = $this->input->post('brand_ids_arr');
 			// format options
 			$options	= array();
 			if($this->input->post('option'))
@@ -385,7 +462,7 @@ class Products extends Admin_Controller {
 			}	
 			
 			// save product 
-			$product_id	= $this->Product_model->save($save, $options, $categories);
+			$product_id	= $this->Product_model->save($save, $options, $categories,$brand_ids_arr);
 			
 			// add file associations
 			// clear existsing
